@@ -1094,6 +1094,7 @@ public struct ChatQuery: Equatable, Codable, Streamable {
 
                         public let type: Self.JSONType
                         public let properties: [String: Property]?
+                        public let required: [String]?
                         public let pattern: String?
                         public let const: String?
                         public let `enum`: [String]?
@@ -1107,6 +1108,7 @@ public struct ChatQuery: Equatable, Codable, Streamable {
                         public init(
                             type: Self.JSONType,
                             properties: [String : Property]? = nil,
+                            required: [String]? = nil,
                             pattern: String? = nil,
                             const: String? = nil,
                             `enum`: [String]? = nil,
@@ -1119,6 +1121,7 @@ public struct ChatQuery: Equatable, Codable, Streamable {
                         ) {
                             self.type = type
                             self.properties = properties
+                            self.required = required
                             self.pattern = pattern
                             self.const = const
                             self.`enum` = `enum`
