@@ -49,6 +49,7 @@ This repository contains Swift community-maintained implementation over [OpenAI]
           - [Submit Tool Outputs for Run](#submit-tool-outputs-for-run)
         - [Files](#files)
           - [Upload File](#upload-file)
+  - [Cancelling requests](#cancelling-requests)
 - [Example Project](#example-project)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Links](#links)
@@ -97,7 +98,9 @@ let configuration = OpenAI.Configuration(token: "YOUR_TOKEN_HERE", organizationI
 let openAI = OpenAI(configuration: configuration)
 ```
 
-Once token you posses the token, and the instance is initialized you are ready to make requests.
+See `OpenAI.Configuration` for more values that can be passed on init for customization, like: `host`, `basePath`, `port`, `scheme` and `customHeaders`.
+
+Once you posses the token, and the instance is initialized you are ready to make requests.
 
 ### Chats
 
@@ -528,6 +531,42 @@ let result = try await openAI.audioCreateSpeech(query: query)
 ```
 [OpenAI Create Speech – Documentation](https://platform.openai.com/docs/api-reference/audio/createSpeech)
 
+#### Audio Create Speech Streaming
+
+Audio Create Speech is available by using `audioCreateSpeechStream` function. Tokens will be sent one-by-one.
+
+**Closures**
+```swift
+openAI.audioCreateSpeechStream(query: query) { partialResult in
+    switch partialResult {
+    case .success(let result):
+        print(result.audio)
+    case .failure(let error):
+        //Handle chunk error here
+    }
+} completion: { error in
+    //Handle streaming error here
+}
+```
+
+**Combine**
+
+```swift
+openAI
+    .audioCreateSpeechStream(query: query)
+    .sink { completion in
+        //Handle completion result here
+    } receiveValue: { result in
+        //Handle chunk here
+    }.store(in: &cancellables)
+```
+
+**Structured concurrency**
+```swift
+for try await result in openAI.audioCreateSpeechStream(query: query) {
+   //Handle result here
+}
+```
 
 #### Audio Transcriptions
 
@@ -1041,6 +1080,39 @@ let query = FilesQuery(purpose: "assistants", file: fileData, fileName: url.last
 openAI.files(query: query) { result in
   //Handle response here
 }
+```
+
+### Cancelling requests
+#### Closure based API
+When you call any of the closure-based API methods, it returns discardable `CancellableRequest`. Hold a reference to it to be able to cancel the request later.
+```swift
+let cancellableRequest = object.chats(query: query, completion: { _ in })
+cancellableReques
+```
+
+#### Swift Concurrency
+For Swift Concurrency calls, you can simply cancel the calling task, and corresponding `URLSessionDataTask` would get cancelled automatically.
+```swift
+let task = Task {
+    do {
+        let chatResult = try await openAIClient.chats(query: .init(messages: [], model: "asd"))
+    } catch {
+        // Handle cancellation or error
+    }
+}
+            
+task.cancel()
+```
+
+#### Combine
+In Combine, use a default cancellation mechanism. Just discard the reference to a subscription, or call `cancel()` on it.
+
+```swift
+let subscription = openAIClient
+    .images(query: query)
+    .sink(receiveCompletion: { completion in }, receiveValue: { imagesResult in })
+    
+subscription.cancel()
 ```
 
 ## Example Project
